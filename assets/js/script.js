@@ -1,77 +1,96 @@
 var searchInputEl = document.querySelector('#search-input');
 var searchFormEl = document.querySelector('#search-form');
-
+var currentForecastEl = document.querySelector('.current');
+var dashboardEl = document.querySelector('#dashboard');
 
 var handleSearchFormSubmit = function (event) {
   event.preventDefault();
 
   var searchInput = searchInputEl.value.trim();
+  console.log(searchInput);
 
   if (!searchInput) {
     console.error('Please enter the name of a city');
     return;
   } else {
-    getCoordinates(searchInput);
+    fetchWeather(searchInput);
   }
 }
 
-var getCoordinates = function (location) {
+var apiKey = '9994ccfc4f65c898d36101a0b3ccac63';
 
-  var geoApiUrl = 'http://api.openweathermap.org/geo/1.0/direct?q='
+var fetchWeather = function (location) {
+
+  var weatherApiUrl = 'https://api.openweathermap.org/data/2.5/weather?q=' 
   + location +
-  + '&appid=&appid=36e56fdbc7dc57b349ba31ffef417a61';
+  '&units=imperial&appid='
+  + apiKey;
   
-  fetch(geoApiUrl)
-    .then(function (response) {
-      getForecast(response.lat, response.lon);
+  fetch(weatherApiUrl)
+    .then( function(response) {
+      return response.json();
     })
-    .catch(function (error) {
+    .then( function(data) {
+      const lat = data.coord.lat;
+      const lon = data.coord.lon;
+      displayWeather(data);
+      console.log('lat', lat);
+      console.log('long', lon);
+      getForecast(lat, lon);
+    })
+    .catch( function(error) {
       alert('Unable to connect to OpenWeather');
     });
-  
+}
+
+function displayWeather(weather) {
+  dashboardEl.classList.remove("hidden");
+
+  currentForecastEl.children[0].textContent = weather.name + " " + dayjs().format('DD/MM/YYYY');
+  document.getElementById('current-temp').textContent = "Temp: " + weather.main.temp + "\xB0F";
+  document.getElementById('current-wind').textContent = "Wind: " + weather.wind.speed + " MPH";
+  document.getElementById('current-humidity').textContent = "Humidity: " + weather.main.humidity + "%";
 }
 
 var getForecast = function (latitude, longitude) {
-  var weatherApiUrl = 'api.openweathermap.org/data/2.5/forecast?lat=' 
+  var forecastApiUrl = 'http://api.openweathermap.org/data/2.5/forecast?lat=' 
   + latitude 
-  + '&' + 'lon=' 
+  + '&lon=' 
   + longitude
-  + '&units=standard&cnt=5&appid=36e56fdbc7dc57b349ba31ffef417a61';
+  + '&units=imperial&cnt=40&appid='
+  + apiKey;
 
-  fetch(weatherApiUrl)
-    .then(function (response) {
-      loadForecast(response);
+  fetch(forecastApiUrl)
+    .then( function (response) {
+      return response.json();
     })
-    .catch(function (error) {
-      alert('Unable to connect to GitHub');
+    .then( function(data) {
+      generateForecast(data);
+    })
+    .catch( function (error) {
+      alert('Unable to connect to OpenWeather');
     });
-};
+}
 
-function loadForecast(forecast) {
-  // for the 5 cards that should be in the 5 day forecast
-  // Make a card that has the day
 
+
+function generateForecast(forecast) {
   for (var i = 0; i < 6; i++) {
-    var issueEl = document.createElement('a');
-    issueEl.classList = 'list-item flex-row justify-space-between align-center';
-    issueEl.setAttribute('href', issues[i].html_url);
-    issueEl.setAttribute('target', '_blank');
-
-    var titleEl = document.createElement('span');
-    titleEl.textContent = issues[i].title;
-    issueEl.appendChild(titleEl);
-
-    var typeEl = document.createElement('span');
-
-    if (issues[i].pull_request) {
-      typeEl.textContent = '(Pull request)';
+    var forecastCardEl = document.createElement('div');
+    var forecastEl = document.querySelector('.forecast');
+    if (i!==0) {
+      var corrector = 7;
     } else {
-      typeEl.textContent = '(Issue)';
+      var corrector = 0;
     }
-
-    issueEl.appendChild(typeEl);
-
-    issueContainerEl.appendChild(issueEl);
+    var trueIndex = i + corrector*i;
+    console.log(trueIndex);
+    forecastCardEl.classList = 'card flex-row align-center card-rounded p-3';
+    forecastCardEl.innerHTML = 'Date: ' + forecast.list[trueIndex].dt_txt + '<br>';
+    forecastCardEl.innerHTML += "Temp: " + forecast.list[trueIndex].main.temp + '\xB0F<br>';
+    forecastCardEl.innerHTML += "Wind: " + forecast.list[trueIndex].wind.speed + 'MPH<br>';
+    forecastCardEl.innerHTML += "Humidity: " + forecast.list[trueIndex].main.humidity + '%<br>';
+    forecastEl.appendChild(forecastCardEl);
   }
 }
 
